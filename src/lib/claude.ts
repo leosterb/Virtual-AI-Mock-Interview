@@ -1,11 +1,7 @@
-import { Role, Message, InterviewResult } from './types';
+import { Role, InterviewResult } from './types';
 import { getSystemPrompt, getOpeningMessage } from './interviewPrompts';
 
-const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-// Model to use
-const MODEL = 'openrouter/free';
+import { callProvider, getProviderSettings } from './providers';
 
 interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
@@ -15,36 +11,8 @@ interface ConversationMessage {
 let conversationHistory: ConversationMessage[] = [];
 let systemPrompt: string = '';
 
-async function callOpenRouter(messages: ConversationMessage[]): Promise<string> {
-  console.log('Calling OpenRouter with messages:', messages.length);
-
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-      'X-Title': 'AI Interview Practice',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: messages,
-      max_tokens: 500,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    console.error('OpenRouter error:', error);
-    throw new Error(error.error?.message || `OpenRouter API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log('OpenRouter response:', data);
-  return data.choices[0]?.message?.content || '';
-}
-
 export async function startInterview(role: Role): Promise<string> {
+  if (!getProviderSettings()) throw new Error('Choose an AI provider and enter your API key on the home page.');
   conversationHistory = [];
   systemPrompt = getSystemPrompt(role);
 
@@ -77,7 +45,7 @@ export async function processResponse(userMessage: string): Promise<string> {
   ];
 
   try {
-    const assistantContent = await callOpenRouter(messages);
+    const assistantContent = await callProvider(messages, 500);
     console.log('Assistant response:', assistantContent);
 
     conversationHistory.push({
@@ -106,28 +74,7 @@ export async function endInterview(): Promise<InterviewResult> {
     })),
   ];
 
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-      'X-Title': 'AI Interview Practice',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: messages,
-      max_tokens: 1024,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error?.message || `OpenRouter API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const evaluationText = data.choices[0]?.message?.content || '';
+  const evaluationText = await callProvider(messages, 1024);
 
   const result = parseEvaluation(evaluationText);
 

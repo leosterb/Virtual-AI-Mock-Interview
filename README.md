@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Interview Practice
 
-## Getting Started
+A browser-based mock interview app. Visitors choose a role and bring their own AI provider API key. No application server is required for the published website.
 
-First, run the development server:
+## Publish on GitHub Pages
+
+1. Push these changes to `main` on `leosterb/Virtual-AI-Mock-Interview`.
+2. In GitHub, open **Settings → Pages → Build and deployment → Source** and select **GitHub Actions**.
+3. Open **Actions → Deploy website to GitHub Pages** and run the workflow (or let the next push to `main` trigger it).
+4. After deployment succeeds, share **https://leosterb.github.io/Virtual-AI-Mock-Interview/**.
+
+The workflow installs locked dependencies, tests the provider adapters, builds the static `out/` directory, and deploys it. `actions/configure-pages` supplies the base path, so links and assets work at the repository URL. No API keys belong in GitHub Actions secrets or the build: every visitor supplies their own key in the page. A public repository supports Pages on GitHub Free; private repository Pages availability depends on the account plan and settings.
+
+GitHub Pages provides HTTPS for camera and microphone access. Visitors should use a supported browser (Chrome recommended), grant microphone/camera permissions, and have access to their chosen AI provider. Provider quotas, model availability, and browser CORS rules still apply.
+
+## Local development
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. For a static production build matching the project URL:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_BASE_PATH=/Virtual-AI-Mock-Interview npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Serve `out/` as static files mounted at `/Virtual-AI-Mock-Interview/`; `next start` does not serve static exports. Omit `NEXT_PUBLIC_BASE_PATH` to build for a domain root. The build downloads Geist fonts; Google Fonts network access is required. In proxy-based cloud environments, `npm run build -- --webpack` uses the supported webpack builder and its font-fetch proxy support.
 
-## Learn More
+## Bring your own AI provider
 
-To learn more about Next.js, take a look at the following resources:
+Before choosing a role, select Google Gemini or an OpenAI-compatible provider and enter your own API key and model ID. Gemini keys are available from [Google AI Studio](https://aistudio.google.com/apikey); free-tier eligibility and limits vary. For OpenRouter use `https://openrouter.ai/api/v1` with `openrouter/free`, or enter another provider's HTTPS base URL and model ID (for example, `https://api.openai.com/v1`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Requests use Gemini's `generateContent` API or the OpenAI-compatible `/chat/completions` API. Custom endpoints must allow browser requests through CORS. Keys remain only in tab memory, clear on refresh, and are sent directly to the chosen provider with interview text. You can change providers or clear the key from role selection. No shared application API key or `NEXT_PUBLIC_OPENROUTER_API_KEY` is required.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Provider adapter tests (Node.js 24):
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+node --test tests/providers.test.mjs
+```

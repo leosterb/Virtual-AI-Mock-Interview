@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getProviderSettings } from '@/lib/providers';
 import { Role } from '@/lib/types';
 import { InterviewRoom } from '@/components/InterviewRoom';
 
@@ -11,6 +12,10 @@ export default function InterviewPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!getProviderSettings()) {
+      router.replace('/');
+      return;
+    }
     // Get role from sessionStorage
     const roleData = sessionStorage.getItem('interviewRole');
     if (roleData) {
