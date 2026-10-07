@@ -69,7 +69,7 @@ export function parseEvaluation(text: string, expectedAnswers?: number): Intervi
       if (rating.answerIndex !== i + 1 || !Number.isInteger(rating.score) || rating.score < 1 || rating.score > 10 || typeof rating.feedback !== 'string' || !rating.feedback.trim()) throw new Error();
     }
     return {
-      decision: parsed.decision, reasoning: parsed.reasoning, scores: parsed.scores,
+      decision: parsed.decision, reasoning: parsed.reasoning, scores: Object.fromEntries(keys.map(key => [key, parsed.scores[key]])) as InterviewResult['scores'],
       strengths: parsed.strengths, improvements: parsed.improvements, transcript: [], answerRatings: ratings,
     };
   } catch {

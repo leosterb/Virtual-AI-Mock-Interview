@@ -19,11 +19,9 @@ export default function Home() {
 
   if (!configured) return <ProviderSetup onReady={() => setConfigured(true)} />;
 
-  return <>
-    <div className="bg-slate-900 px-6 pt-6 text-right text-white">
-      <button className="underline" onClick={() => setConfigured(false)}>Change provider or key</button>
-      <button className="ml-6 underline" onClick={() => { setProviderSettings(null); setConfigured(false); }}>Clear key</button>
-    </div>
-    <RoleSelector onSelectRole={handleSelectRole} />
-  </>;
+  const settings = getProviderSettings();
+  return <RoleSelector onSelectRole={handleSelectRole}
+    providerLabel={settings?.provider === 'gemini' ? 'Google Gemini' : 'Your AI provider'}
+    onChangeProvider={() => setConfigured(false)}
+    onClearKey={() => { setProviderSettings(null); setConfigured(false); }} />;
 }

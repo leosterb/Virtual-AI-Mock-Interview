@@ -75,3 +75,11 @@ test('canceled responses cannot mutate history, and role prompts contain relevan
   assert.match(prompt, /Ask ONE question at a time/);
   assert.match(prompt, /Do not include evaluation JSON in spoken conversation/);
 });
+
+
+test('feedback retains only the five validated score categories', () => {
+  const agent = setup(async () => '');
+  const result = agent.parseEvaluation(JSON.stringify({ ...feedback, scores: { ...feedback.scores, unexpected: '<script>bad</script>' } }));
+  assert.equal(Object.keys(result.scores).length, 5);
+  assert.equal(result.scores.unexpected, undefined);
+});
