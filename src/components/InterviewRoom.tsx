@@ -9,7 +9,8 @@ import { Transcript } from './Transcript';
 import { Controls } from './Controls';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { AppBrand } from './AppBrand';
+import { ArrowLeft, Clock } from 'lucide-react';
 
 interface InterviewRoomProps {
   role: Role;
@@ -62,25 +63,26 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
       onViewResults={() => router.push('/results')}
       onPracticeAgain={() => { sessionStorage.removeItem('interviewResult'); router.push('/'); }}
     />}
-    <div inert={phase === 'ending' || phase === 'ended'} className="h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col overflow-y-auto lg:overflow-hidden">
+    <div inert={phase === 'ending' || phase === 'ended'} className="app-surface h-dvh text-white flex flex-col overflow-y-auto lg:overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 shrink-0">
+      <div className="app-header flex flex-wrap items-center justify-between gap-4 px-5 py-4 shrink-0">
         <button
           onClick={() => router.push('/')}
           className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          Exit
+          Back to roles
         </button>
+        <div className="hidden xl:block"><AppBrand /></div>
         <div className="text-center">
           <h1 className="font-semibold">{role.title} Interview</h1>
           <p className="text-sm text-slate-400">{role.department}</p>
         </div>
-        <div className="text-2xl font-mono">{formatTime(timeElapsed)}</div>
+        <div className="app-secondary flex items-center gap-2 rounded-full px-3 py-2 text-sm font-mono"><Clock className="h-4 w-4 text-violet-300" />{formatTime(timeElapsed)}</div>
       </div>
 
       {/* Instruction banner */}
-      <div className="bg-blue-500/20 border-b border-blue-500/30 px-6 py-2 text-center shrink-0">
+      <div className="bg-violet-400/10 border-b border-violet-400/20 px-6 py-2 text-center shrink-0">
         <p className="text-sm text-blue-300">
           {phase === 'waiting' ? 'Take a breath. Alex will begin after a 3-second pause.' : <><strong>Tip:</strong> Speak naturally. After 3 seconds of silence, your answer is sent automatically. You can also use Send answer.</>}
         </p>
@@ -125,7 +127,7 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
         </div>
 
         {/* Transcript sidebar */}
-        <div className="h-80 w-full p-4 border-t lg:border-t-0 lg:border-l border-slate-700 shrink-0 lg:h-auto lg:w-80">
+        <div className="h-80 w-full p-4 border-t lg:border-t-0 lg:border-l border-white/10 shrink-0 lg:h-auto lg:w-80">
           <Transcript messages={messages} currentTranscript={currentTranscript} />
         </div>
       </div>

@@ -26,7 +26,7 @@ export function Controls({
   onEndInterview,
 }: ControlsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+    <div className="flex flex-wrap items-center justify-center gap-4 app-panel p-4 rounded-2xl">
       {/* Mic toggle */}
       <button
         onClick={isListening ? onStopListening : onStartListening}
@@ -34,9 +34,10 @@ export function Controls({
         className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
           isListening
             ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-            : 'bg-slate-700 hover:bg-slate-600 text-white'
+            : 'app-primary hover:brightness-110 text-white'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
         title={isListening ? 'Stop listening' : 'Start speaking'}
+        aria-label={isListening ? 'Stop listening' : 'Start speaking'}
       >
         {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
       </button>
@@ -74,7 +75,7 @@ export function Controls({
       </div>
 
       <button onClick={onSubmitResponse} disabled={!isReady || !hasTranscript || isThinking || isSpeaking}
-        className="rounded-lg bg-blue-600 px-4 py-3 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        className="app-primary rounded-xl px-4 py-3 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         title="Send answer">
         <Send className="mr-2 inline h-4 w-4" />Send answer
       </button>
@@ -85,6 +86,7 @@ export function Controls({
         disabled={!isReady || isThinking}
         className="w-14 h-14 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="End interview"
+        aria-label="End interview"
       >
         <PhoneOff className="w-6 h-6" />
       </button>

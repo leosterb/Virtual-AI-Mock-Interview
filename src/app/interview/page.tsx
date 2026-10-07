@@ -20,7 +20,7 @@ export default function InterviewPage() {
   }, [configured, hydrated, role, router]);
 
   if (!hydrated || !role || !configured) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+    <div className="app-surface min-h-dvh flex items-center justify-center text-white">
       <div className="text-xl">Loading interview...</div>
     </div>
   );

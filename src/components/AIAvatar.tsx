@@ -9,7 +9,7 @@ interface AIAvatarProps {
 
 export function AIAvatar({ isSpeaking, isThinking }: AIAvatarProps) {
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+    <div className="relative w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/15 rounded-2xl border border-violet-400/20 flex items-center justify-center">
       {/* Speaking indicator */}
       {isSpeaking && (
         <div className="absolute inset-0 bg-purple-500/20 rounded-xl animate-pulse" />
@@ -17,8 +17,8 @@ export function AIAvatar({ isSpeaking, isThinking }: AIAvatarProps) {
 
       {/* Avatar container */}
       <div className={`relative z-10 ${isSpeaking ? 'scale-105' : ''} transition-transform duration-300`}>
-        <div className={`w-28 h-28 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg ${isSpeaking ? 'ring-4 ring-purple-400/50' : ''}`}>
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+        <div className={`w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg ${isSpeaking ? 'ring-4 ring-purple-400/50' : ''}`}>
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
             <User className="w-10 h-10 text-white" />
           </div>
         </div>

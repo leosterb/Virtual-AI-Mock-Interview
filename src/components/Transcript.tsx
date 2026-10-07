@@ -10,8 +10,8 @@ interface TranscriptProps {
 
 export function Transcript({ messages, currentTranscript }: TranscriptProps) {
   return (
-    <div className="h-full flex flex-col bg-slate-800/50 rounded-xl border border-slate-700">
-      <div className="px-4 py-3 border-b border-slate-700">
+    <div className="h-full flex flex-col app-panel rounded-2xl">
+      <div className="px-4 py-3 border-b border-white/10">
         <h3 className="font-semibold text-white">Transcript</h3>
       </div>
 
@@ -43,8 +43,8 @@ export function Transcript({ messages, currentTranscript }: TranscriptProps) {
             <div
               className={`flex-1 p-3 rounded-lg ${
                 message.role === 'interviewer'
-                  ? 'bg-slate-700/50'
-                  : 'bg-blue-500/20'
+                  ? 'bg-white/5'
+                  : 'bg-indigo-500/20'
               }`}
             >
               <p className="text-sm text-slate-200">{message.content}</p>
@@ -61,7 +61,7 @@ export function Transcript({ messages, currentTranscript }: TranscriptProps) {
             <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center shrink-0">
               <User className="w-4 h-4 text-white" />
             </div>
-            <div className="flex-1 p-3 rounded-lg bg-blue-500/20">
+            <div className="flex-1 p-3 rounded-lg bg-indigo-500/20">
               <p className="text-sm text-slate-200">{currentTranscript}</p>
               <span className="text-xs text-blue-400 mt-1 block animate-pulse">
                 Speaking...

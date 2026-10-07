@@ -55,3 +55,9 @@ The full prompt is in `src/lib/interviewPrompts.ts`, in `getSystemPrompt`. It de
 Use **Save as PDF** in the call-ended modal or full results page. A separate print-friendly report opens with scores, answer ratings, comments, strengths, improvements, and the transcript. Choose **Save as PDF** as the destination in the browser's print dialog. Allow pop-ups if prompted. The report is generated locally, with text escaped and Unicode preserved; no API key is included.
 
 Text-to-speech uses the browser's Web Speech API (`window.speechSynthesis` and `SpeechSynthesisUtterance`), not an external TTS service. The app prefers an available voice whose name contains Zira, Samantha, female, or woman, then falls back to another English voice or the device default. Voice availability and whether synthesis is local or network-backed depend on the browser and operating system. Rate is 0.95, pitch 1.05, and volume 1. Gemini or the chosen AI provider generates text; the browser reads it aloud.
+
+## Navigation and appearance
+
+New visitors see a landing page explaining the practice experience. **Start practicing** opens AI setup, followed by role selection. Returning to Home or AI settings keeps the key in tab memory; Disconnect clears it. Setup has a Back action, and each role still requires explicit confirmation in its preview before the call begins.
+
+Landing, setup, role cards, preview dialogs, the call room, and feedback share the same navy background, contrasting panels, and blue-to-purple primary actions. The shared styles are `app-surface`, `app-panel`, `app-header`, `app-primary`, `app-secondary`, and `app-input` in `src/app/globals.css`. PDF reports keep a white paper layout for printing.

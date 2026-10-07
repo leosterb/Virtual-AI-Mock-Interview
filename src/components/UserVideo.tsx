@@ -41,7 +41,7 @@ export function UserVideo({ isMuted }: UserVideoProps) {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl overflow-hidden">
+    <div className="relative w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/15 rounded-2xl border border-violet-400/20 overflow-hidden">
       {hasCamera && hasPermission ? (
         <>
           <video

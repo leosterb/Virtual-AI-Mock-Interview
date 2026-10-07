@@ -22,7 +22,7 @@ export default function ResultsPage() {
   useEffect(() => { if (hydrated && !result) router.replace('/'); }, [hydrated, result, router]);
 
   if (!result) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+    <div className="app-surface min-h-dvh flex items-center justify-center text-white">
       <div className="text-xl">Loading results...</div>
     </div>
   );
