@@ -38,6 +38,13 @@ export function LandingPage({ onStart }: { onStart: () => void }) {
         { icon: Download, title: 'Keep your progress', text: 'Get star ratings and practical feedback for your answers. Save a PDF to revisit later.' },
       ].map(({ icon: Icon, title, text }, index) => <article key={title} className="app-panel rounded-2xl p-6"><div className="mb-5 flex items-center justify-between"><span className="rounded-xl bg-violet-400/10 p-3 text-violet-200"><Icon className="h-5 w-5" /></span><span className="text-sm text-slate-400">0{index + 1}</span></div><h3 className="mb-3 text-lg font-semibold">{title}</h3><p className="text-sm leading-relaxed text-slate-400">{text}</p></article>)}</div>
     </section>
-    <footer className="border-t border-white/10 px-5 py-6 text-center text-sm text-slate-400">Built for practice, not perfection. Your next conversation could change everything.</footer>
+    <footer className="border-t border-white/10 px-5 py-8 text-center text-sm text-slate-400">
+      <p>Built for practice, not perfection. Your next conversation could change everything.</p>
+      <a href="https://www.buymeacoffee.com/zakbanzon" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded-lg transition-opacity hover:opacity-90">
+        {/* External button stays a plain image so it works with static hosting. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=zakbanzon&button_colour=5F7FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" alt="Buy me a coffee" width={217} height={60} loading="lazy" className="h-auto max-w-full" />
+      </a>
+    </footer>
   </main>;
 }
