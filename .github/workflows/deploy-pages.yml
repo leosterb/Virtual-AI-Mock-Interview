@@ -28,8 +28,10 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Install dependencies
         run: npm ci
-      - name: Test provider adapters
-        run: node --test tests/providers.test.mjs
+      - name: Test interview and provider flows
+        run: npm test
+      - name: Lint
+        run: npm run lint
       - name: Build static website
         run: npm run build
         env:

@@ -1,109 +1,74 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
 
-interface UseSpeechSynthesisReturn {
-  speak: (text: string) => Promise<void>;
-  stop: () => void;
-  isSpeaking: boolean;
-  isSupported: boolean;
-}
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 
-export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
+const subscribe = () => () => {};
+
+export function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const isSupported = useSyncExternalStore(subscribe,
+    () => 'speechSynthesis' in window, () => false);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const pendingRef = useRef<((spoken: boolean) => void) | null>(null);
+
+  const stop = useCallback(() => {
+    const settle = pendingRef.current;
+    pendingRef.current = null;
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    settle?.(false);
+    setIsSpeaking(false);
+  }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-
-    setIsSupported(true);
-
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        voicesRef.current = voices;
-      }
-    };
-
-    // Voices may already be available (e.g. Firefox)
+    if (!('speechSynthesis' in window)) return;
+    const loadVoices = () => { voicesRef.current = window.speechSynthesis.getVoices(); };
     loadVoices();
-
-    // Chrome/Edge fire this event when voices are ready
     window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-
     return () => {
       window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+      const settle = pendingRef.current;
+      pendingRef.current = null;
       window.speechSynthesis.cancel();
+      settle?.(false);
     };
   }, []);
 
-  const speak = useCallback((text: string): Promise<void> => {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-        resolve();
-        return;
-      }
-
-      window.speechSynthesis.cancel();
-
+  const speak = useCallback((text: string): Promise<boolean> => {
+    stop();
+    return new Promise(resolve => {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) { resolve(false); return; }
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.95;
       utterance.pitch = 1.05;
       utterance.volume = 1;
-
-      const voices = voicesRef.current.length > 0
-        ? voicesRef.current
-        : window.speechSynthesis.getVoices();
-
-      // Try specific female voices first (Windows, macOS, common)
-      const femaleKeywords = ['zira', 'samantha', 'female', 'woman'];
-      let selectedVoice: SpeechSynthesisVoice | undefined;
-
-      for (const keyword of femaleKeywords) {
-        selectedVoice = voices.find(v => v.name.toLowerCase().includes(keyword));
-        if (selectedVoice) break;
-      }
-
-      // Broader fallback: any English voice
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.startsWith('en'));
-      }
-
-      // Last resort: just use whatever is available
-      if (!selectedVoice && voices.length > 0) {
-        selectedVoice = voices[0];
-      }
-
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log('Using voice:', selectedVoice.name);
-      } else {
-        console.warn('No voices available yet. Available:', voices.map(v => v.name));
-      }
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
+      const voices = voicesRef.current.length ? voicesRef.current : window.speechSynthesis.getVoices();
+      const keywords = ['zira', 'samantha', 'female', 'woman'];
+      utterance.voice = keywords.map(keyword => voices.find(voice => voice.name.toLowerCase().includes(keyword)))
+        .find(Boolean) ?? voices.find(voice => voice.lang.startsWith('en')) ?? voices[0] ?? null;
+      // Cancellation does not reliably fire onend in every browser.
+      let finished = false;
+      const settle = (spoken: boolean) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(watchdog);
+        utterance.onstart = null;
+        utterance.onend = null;
+        utterance.onerror = null;
+        if (pendingRef.current === settle) pendingRef.current = null;
         setIsSpeaking(false);
-        resolve();
+        resolve(spoken);
       };
-      utterance.onerror = (event) => {
-        if (event.error !== 'interrupted' && event.error !== 'canceled') {
-          console.warn('TTS error:', event.error);
-        }
-        setIsSpeaking(false);
-        resolve();
-      };
-
-      window.speechSynthesis.speak(utterance);
+      const watchdog = setTimeout(() => {
+        settle(false);
+        window.speechSynthesis.cancel();
+      }, Math.max(15000, text.length * 150));
+      pendingRef.current = settle;
+      setIsSpeaking(true);
+      utterance.onend = () => settle(true);
+      utterance.onerror = () => settle(false);
+      try { window.speechSynthesis.speak(utterance); } catch { settle(false); }
     });
-  }, []);
-
-  const stop = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-  }, []);
+  }, [stop]);
 
   return { speak, stop, isSpeaking, isSupported };
 }

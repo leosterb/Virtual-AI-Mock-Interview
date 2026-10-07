@@ -1,8 +1,9 @@
 'use client';
 
-import { Mic, MicOff, PhoneOff, Clock, Loader2 } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Clock, Loader2, Send } from 'lucide-react';
 
 interface ControlsProps {
+  isReady: boolean;
   isListening: boolean;
   isThinking: boolean;
   isSpeaking: boolean;
@@ -14,6 +15,7 @@ interface ControlsProps {
 }
 
 export function Controls({
+  isReady,
   isListening,
   isThinking,
   isSpeaking,
@@ -24,11 +26,11 @@ export function Controls({
   onEndInterview,
 }: ControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+    <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
       {/* Mic toggle */}
       <button
         onClick={isListening ? onStopListening : onStartListening}
-        disabled={isThinking || isSpeaking}
+        disabled={!isReady || isThinking || isSpeaking}
         className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
           isListening
             ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
@@ -41,7 +43,7 @@ export function Controls({
 
       {/* Status indicator */}
       <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg min-w-[200px] justify-center">
-        {isThinking ? (
+        {!isReady ? <span className="text-sm text-blue-300">Getting ready...</span> : isThinking ? (
           <>
             <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
             <span className="text-sm text-yellow-300">Alex is thinking...</span>
@@ -71,10 +73,16 @@ export function Controls({
         )}
       </div>
 
+      <button onClick={onSubmitResponse} disabled={!isReady || !hasTranscript || isThinking || isSpeaking}
+        className="rounded-lg bg-blue-600 px-4 py-3 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Send answer">
+        <Send className="mr-2 inline h-4 w-4" />Send answer
+      </button>
+
       {/* End interview */}
       <button
         onClick={onEndInterview}
-        disabled={isThinking}
+        disabled={!isReady || isThinking}
         className="w-14 h-14 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="End interview"
       >

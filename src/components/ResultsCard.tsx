@@ -1,35 +1,37 @@
 'use client';
 
 import { InterviewResult } from '@/lib/types';
+import { StarRating } from './StarRating';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface ResultsCardProps {
   result: InterviewResult;
   onPracticeAgain: () => void;
+  embedded?: boolean;
 }
 
-export function ResultsCard({ result, onPracticeAgain }: ResultsCardProps) {
+export function ResultsCard({ result, onPracticeAgain, embedded = false }: ResultsCardProps) {
   const decisionConfig = {
     hire: {
       icon: CheckCircle,
       color: 'text-green-400',
       bg: 'bg-green-500/20',
       border: 'border-green-500',
-      label: 'HIRED',
+      label: 'Strong practice performance',
     },
     'no-hire': {
       icon: XCircle,
       color: 'text-red-400',
       bg: 'bg-red-500/20',
       border: 'border-red-500',
-      label: 'NOT HIRED',
+      label: 'More practice recommended',
     },
     maybe: {
       icon: AlertCircle,
       color: 'text-yellow-400',
       bg: 'bg-yellow-500/20',
       border: 'border-yellow-500',
-      label: 'MAYBE',
+      label: 'Keep building your evidence',
     },
   };
 
@@ -37,52 +39,41 @@ export function ResultsCard({ result, onPracticeAgain }: ResultsCardProps) {
   const DecisionIcon = config.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16">
+    <div className={embedded ? "text-white" : "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16"}>
       <div className="max-w-4xl mx-auto px-4">
         {/* Decision Header */}
         <div className={`text-center mb-12 p-8 rounded-xl ${config.bg} border ${config.border}`}>
           <DecisionIcon className={`w-20 h-20 mx-auto mb-4 ${config.color}`} />
-          <h1 className="text-4xl font-bold mb-2">{config.label}</h1>
+          <h2 className="text-2xl font-bold mb-2">{config.label}</h2>
+          <p className="mb-4 text-sm text-slate-400">Practice feedback, not a hiring decision</p>
           <p className="text-slate-300 max-w-xl mx-auto">{result.reasoning}</p>
         </div>
 
         {/* Scores */}
         <div className="bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-700">
           <h2 className="text-xl font-semibold mb-6">Performance Scores</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="space-y-4">
             {Object.entries(result.scores).map(([key, value]) => (
-              <div key={key} className="text-center">
-                <div className="relative w-20 h-20 mx-auto mb-2">
-                  <svg className="w-20 h-20 -rotate-90">
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="35"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className="text-slate-700"
-                    />
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="35"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className={value >= 7 ? 'text-green-400' : value >= 5 ? 'text-yellow-400' : 'text-red-400'}
-                      strokeDasharray={`${value * 22} 220`}
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xl font-bold">
-                    {value}
-                  </span>
-                </div>
-                <span className="text-sm text-slate-400 capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </span>
+              <div key={key} className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm text-slate-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                <StarRating score={value} label={key} />
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-700">
+          <h2 className="text-xl font-semibold mb-4">Your answers</h2>
+          <div className="space-y-6">
+            {result.answerRatings.map(rating => {
+              const answer = result.transcript.filter(message => message.role === 'candidate')[rating.answerIndex - 1];
+              return <div key={rating.answerIndex}>
+                <h3 className="mb-2 font-semibold">Answer {rating.answerIndex}</h3>
+                <StarRating score={rating.score} label={`Answer ${rating.answerIndex}`} />
+                {answer && <p className="mt-2 text-sm text-slate-400">{answer.content}</p>}
+                <p className="mt-2 text-slate-200">{rating.feedback}</p>
+              </div>;
+            })}
           </div>
         </div>
 

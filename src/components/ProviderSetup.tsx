@@ -7,7 +7,7 @@ export function ProviderSetup({ onReady }: { onReady: () => void }) {
   const existing = getProviderSettings();
   const [provider, setProvider] = useState<Provider>(existing?.provider ?? 'gemini');
   const [apiKey, setApiKey] = useState(existing?.apiKey ?? '');
-  const [model, setModel] = useState(existing?.model ?? 'gemini-2.5-flash');
+  const [model, setModel] = useState(existing?.model ?? 'gemini-3.1-flash-lite');
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? 'https://openrouter.ai/api/v1');
   const [error, setError] = useState('');
   const inputClass = 'w-full rounded-lg border border-slate-600 bg-slate-900 p-3 text-white';
@@ -33,7 +33,7 @@ export function ProviderSetup({ onReady }: { onReady: () => void }) {
           <select className={inputClass} value={provider} onChange={event => {
             const next = event.target.value as Provider;
             setProvider(next); setApiKey(''); setError('');
-            setModel(next === 'gemini' ? 'gemini-2.5-flash' : 'openrouter/free');
+            setModel(next === 'gemini' ? 'gemini-3.1-flash-lite' : 'openrouter/free');
           }}>
             <option value="gemini">Google Gemini (Google AI Studio)</option>
             <option value="openai-compatible">OpenAI-compatible provider</option>

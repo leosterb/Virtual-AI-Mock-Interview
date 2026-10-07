@@ -5,25 +5,28 @@ import { User, MicOff, VideoOff } from 'lucide-react';
 
 interface UserVideoProps {
   isMuted: boolean;
-  onToggleMute: () => void;
 }
 
-export function UserVideo({ isMuted, onToggleMute }: UserVideoProps) {
+export function UserVideo({ isMuted }: UserVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCamera, setHasCamera] = useState(true);
   const [hasPermission, setHasPermission] = useState(true);
 
   useEffect(() => {
+    let disposed = false;
+    let ownedStream: MediaStream | null = null;
     async function setupCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (disposed) { stream.getTracks().forEach(track => track.stop()); return; }
+        ownedStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
         setHasCamera(true);
         setHasPermission(true);
-      } catch (err) {
-        console.error('Camera access denied:', err);
+      } catch {
+        if (disposed) return;
         setHasPermission(false);
         setHasCamera(false);
       }
@@ -32,10 +35,8 @@ export function UserVideo({ isMuted, onToggleMute }: UserVideoProps) {
     setupCamera();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
+      disposed = true;
+      ownedStream?.getTracks().forEach(track => track.stop());
     };
   }, []);
 

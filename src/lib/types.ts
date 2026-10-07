@@ -1,4 +1,4 @@
-export type InterviewPhase = 'setup' | 'waiting' | 'active' | 'ended';
+export type InterviewPhase = 'setup' | 'waiting' | 'active' | 'ending' | 'ended';
 
 export interface Role {
   id: string;
@@ -24,6 +24,12 @@ export interface InterviewScores {
   overall: number;
 }
 
+export interface AnswerRating {
+  answerIndex: number;
+  score: number;
+  feedback: string;
+}
+
 export interface InterviewResult {
   decision: 'hire' | 'no-hire' | 'maybe';
   reasoning: string;
@@ -31,6 +37,7 @@ export interface InterviewResult {
   strengths: string[];
   improvements: string[];
   transcript: Message[];
+  answerRatings: AnswerRating[];
 }
 
 export interface InterviewState {

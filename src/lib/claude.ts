@@ -1,6 +1,5 @@
 import { Role, InterviewResult } from './types';
 import { getSystemPrompt, getOpeningMessage } from './interviewPrompts';
-
 import { callProvider, getProviderSettings } from './providers';
 
 interface ConversationMessage {
@@ -9,121 +8,75 @@ interface ConversationMessage {
 }
 
 let conversationHistory: ConversationMessage[] = [];
-let systemPrompt: string = '';
+let systemPrompt = '';
+let sessionVersion = 0;
 
 export async function startInterview(role: Role): Promise<string> {
   if (!getProviderSettings()) throw new Error('Choose an AI provider and enter your API key on the home page.');
-  conversationHistory = [];
+  sessionVersion += 1;
   systemPrompt = getSystemPrompt(role);
-
-  // Use predefined opening message for consistency
-  const openingContent = getOpeningMessage(role);
-
-  conversationHistory.push({
-    role: 'assistant',
-    content: openingContent,
-  });
-
-  return openingContent;
+  const opening = getOpeningMessage(role);
+  conversationHistory = [{ role: 'assistant', content: opening }];
+  return opening;
 }
 
-export async function processResponse(userMessage: string): Promise<string> {
-  console.log('Processing user message:', userMessage);
+export async function processResponse(userMessage: string, signal?: AbortSignal): Promise<string> {
+  const version = sessionVersion;
+  const user: ConversationMessage = { role: 'user', content: userMessage };
+  const response = await callProvider([
+    { role: 'system', content: systemPrompt }, ...conversationHistory, user,
+  ], 2048, signal);
+  // A failed or canceled request must not duplicate an answer when retried.
+  signal?.throwIfAborted();
+  if (version !== sessionVersion) throw new Error('This interview has already been replaced by a new session.');
+  conversationHistory.push(user, { role: 'assistant', content: response });
+  return response;
+}
 
-  conversationHistory.push({
-    role: 'user',
-    content: userMessage,
-  });
-
-  // Build messages array with system prompt and conversation history
-  const messages: ConversationMessage[] = [
+export async function endInterview(finalResponse = '', signal?: AbortSignal): Promise<InterviewResult> {
+  const pending: ConversationMessage[] = finalResponse.trim()
+    ? [{ role: 'user', content: finalResponse.trim() }] : [];
+  const answerCount = conversationHistory.filter(message => message.role === 'user').length + pending.length;
+  const evaluationText = await callProvider([
     { role: 'system', content: systemPrompt },
-    ...conversationHistory.map((msg) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    })),
-  ];
-
-  try {
-    const assistantContent = await callProvider(messages, 500);
-    console.log('Assistant response:', assistantContent);
-
-    conversationHistory.push({
-      role: 'assistant',
-      content: assistantContent,
-    });
-
-    return assistantContent;
-  } catch (error) {
-    console.error('Error in processResponse:', error);
-    throw error;
-  }
+    ...conversationHistory, ...pending,
+    { role: 'user', content: `The interview is now complete. Provide the final evaluation as a single JSON object in the specified format. Include answerRatings for all ${answerCount} candidate answers, indexed from 1 in conversation order, with a 1–10 integer score and constructive feedback. Do not include any other text.` },
+  ], 4096, signal);
+  signal?.throwIfAborted();
+  return parseEvaluation(evaluationText, answerCount);
 }
 
-export async function endInterview(): Promise<InterviewResult> {
-  conversationHistory.push({
-    role: 'user',
-    content: 'The interview is now complete. Please provide your final evaluation in the JSON format specified.',
-  });
-
-  const messages: ConversationMessage[] = [
-    { role: 'system', content: systemPrompt },
-    ...conversationHistory.map((msg) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    })),
-  ];
-
-  const evaluationText = await callProvider(messages, 1024);
-
-  const result = parseEvaluation(evaluationText);
-
-  return result;
-}
-
-function parseEvaluation(text: string): InterviewResult {
-  const defaultResult: InterviewResult = {
-    decision: 'maybe',
-    reasoning: 'Unable to parse evaluation.',
-    scores: {
-      communication: 5,
-      technical: 5,
-      problemSolving: 5,
-      culturalFit: 5,
-      overall: 5,
-    },
-    strengths: ['Completed the interview'],
-    improvements: ['Practice more interviews'],
-    transcript: [],
-  };
-
+export function parseEvaluation(text: string, expectedAnswers?: number): InterviewResult {
   try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      return {
-        decision: parsed.decision || 'maybe',
-        reasoning: parsed.reasoning || '',
-        scores: {
-          communication: parsed.scores?.communication || 5,
-          technical: parsed.scores?.technical || 5,
-          problemSolving: parsed.scores?.problemSolving || 5,
-          culturalFit: parsed.scores?.culturalFit || 5,
-          overall: parsed.scores?.overall || 5,
-        },
-        strengths: parsed.strengths || [],
-        improvements: parsed.improvements || [],
-        transcript: [],
-      };
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error();
+    const parsed = JSON.parse(match[0]);
+    if (!['hire', 'no-hire', 'maybe'].includes(parsed.decision) || typeof parsed.reasoning !== 'string' || !parsed.reasoning.trim()) throw new Error();
+    const keys = ['communication', 'technical', 'problemSolving', 'culturalFit', 'overall'] as const;
+    for (const key of keys) {
+      const score = parsed.scores?.[key];
+      if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 10) throw new Error();
     }
-  } catch (error) {
-    console.error('Error parsing evaluation:', error);
+    for (const key of ['strengths', 'improvements']) {
+      if (!Array.isArray(parsed[key]) || !parsed[key].every((item: unknown) => typeof item === 'string')) throw new Error();
+    }
+    if (!Array.isArray(parsed.answerRatings)) throw new Error();
+    const ratings = parsed.answerRatings;
+    if (expectedAnswers !== undefined && ratings.length !== expectedAnswers) throw new Error();
+    ratings.sort((a: { answerIndex: number }, b: { answerIndex: number }) => a.answerIndex - b.answerIndex);
+    for (let i = 0; i < ratings.length; i++) {
+      const rating = ratings[i];
+      if (rating.answerIndex !== i + 1 || !Number.isInteger(rating.score) || rating.score < 1 || rating.score > 10 || typeof rating.feedback !== 'string' || !rating.feedback.trim()) throw new Error();
+    }
+    return {
+      decision: parsed.decision, reasoning: parsed.reasoning, scores: parsed.scores,
+      strengths: parsed.strengths, improvements: parsed.improvements, transcript: [], answerRatings: ratings,
+    };
+  } catch {
+    throw new Error('Your provider returned incomplete or invalid feedback. Click End interview to try again.');
   }
-
-  return defaultResult;
 }
 
 export function getConversationHistory(): ConversationMessage[] {
-  return [...conversationHistory];
+  return conversationHistory.map(message => ({ ...message }));
 }

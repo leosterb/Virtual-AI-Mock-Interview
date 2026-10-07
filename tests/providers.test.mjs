@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { callProvider, getProviderSettings, setProviderSettings } from '../src/lib/providers.ts';
+import { loadSource } from './load-source.mjs';
+const { callProvider, getProviderSettings, setProviderSettings } = loadSource('src/lib/providers.ts');
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; setProviderSettings(null); });
@@ -11,15 +12,15 @@ const messages = [
 ];
 
 test('Gemini sends system instructions, mapped history, key header, and token budget', async () => {
-  setProviderSettings({ provider: 'gemini', apiKey: ' test-key ', model: 'gemini-2.5-flash' });
+  setProviderSettings({ provider: 'gemini', apiKey: ' test-key ', model: 'gemini-3.1-flash-lite' });
   globalThis.fetch = async (url, request) => {
-    assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent');
     assert.equal(request.headers['x-goog-api-key'], 'test-key');
     const body = JSON.parse(request.body);
     assert.equal(body.systemInstruction.parts[0].text, 'Interview instructions');
     assert.deepEqual(body.contents.map(m => m.role), ['model', 'user']);
     assert.equal(body.generationConfig.maxOutputTokens, 500);
-    return Response.json({ candidates: [{ content: { parts: [{ text: 'Follow-up ' }, { text: 'question' }] } }] });
+    return Response.json({ candidates: [{ content: { parts: [{ text: 'Private reasoning', thought: true }, { text: 'Follow-up ' }, { text: 'question' }] } }] });
   };
   assert.equal(await callProvider(messages, 500), 'Follow-up question');
 });
@@ -48,10 +49,22 @@ test('missing credentials and unsafe endpoint URLs are rejected before sending',
 
 test('authentication, quota, and empty responses produce actionable errors', async () => {
   setProviderSettings({ provider: 'gemini', apiKey: 'test-key', model: 'test' });
-  for (const [status, pattern] of [[401, /rejected the API key/], [429, /usage limit/], [404, /model and account/]]) {
+  for (const [status, pattern] of [[401, /rejected the API key/], [429, /usage limit/], [404, /model ID/]]) {
     globalThis.fetch = async () => new Response('', { status });
     await assert.rejects(callProvider(messages, 500), pattern);
   }
   globalThis.fetch = async () => Response.json({ candidates: [] });
   await assert.rejects(callProvider(messages, 500), /returned no text/);
+});
+
+
+test('explicit cancellation reaches the request and preserves AbortError', async () => {
+  setProviderSettings({ provider: 'gemini', apiKey: 'test-key', model: 'gemini-3.1-flash-lite' });
+  const controller = new AbortController();
+  globalThis.fetch = async (_url, request) => new Promise((_resolve, reject) => {
+    request.signal.addEventListener('abort', () => reject(new DOMException('Canceled', 'AbortError')), { once: true });
+  });
+  const pending = callProvider(messages, 2048, controller.signal);
+  controller.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
 });

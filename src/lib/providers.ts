@@ -16,6 +16,7 @@ export function setProviderSettings(value: ProviderSettings | null) {
 export async function callProvider(
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
   maxTokens: number,
+  signal?: AbortSignal,
 ): Promise<string> {
   const config = settings;
   if (!config?.apiKey || !config.model) throw new Error('Choose a provider, API key, and model on the home page.');
@@ -39,7 +40,7 @@ export async function callProvider(
       method: 'POST',
       headers: gemini
         ? { 'Content-Type': 'application/json', 'x-goog-api-key': config.apiKey }
-        : { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}`, 'X-Title': 'AI Interview Practice' },
+        : { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify(gemini ? {
         systemInstruction: { parts: [{ text: messages.filter(m => m.role === 'system').map(m => m.content).join('\n') }] },
         contents: messages.filter(m => m.role !== 'system').map(m => ({
@@ -47,19 +48,21 @@ export async function callProvider(
         })),
         generationConfig: { maxOutputTokens: maxTokens },
       } : { model: config.model, messages, max_tokens: maxTokens }),
-      signal: AbortSignal.timeout(60000),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000),
     });
   } catch {
+    if (signal?.aborted) throw new DOMException('Request canceled', 'AbortError');
     throw new Error('Could not reach your AI provider. Check your connection and try again.');
   }
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw new Error('Your provider rejected the API key. Check its access and permissions.');
     if (response.status === 429) throw new Error('Your provider usage limit was reached. Wait or choose another model or provider.');
+    if (response.status === 400 || response.status === 404) throw new Error('Your provider rejected the model or request. Check the model ID and whether it is available for your API key.');
     throw new Error(`Your provider could not complete the request (HTTP ${response.status}). Check the model and account availability.`);
   }
   const data = await response.json();
   const text = gemini
-    ? data.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text ?? '').join('')
+    ? data.candidates?.[0]?.content?.parts?.filter((part: { thought?: boolean }) => !part.thought).map((part: { text?: string }) => part.text ?? '').join('')
     : data.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || !text.trim()) throw new Error('Your provider returned no text. Try another response or model.');
   return text;

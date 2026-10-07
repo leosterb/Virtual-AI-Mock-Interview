@@ -4,9 +4,10 @@ import { Role } from '@/lib/types';
 import { useInterview } from '@/hooks/useInterview';
 import { AIAvatar } from './AIAvatar';
 import { UserVideo } from './UserVideo';
+import { CallEndedModal } from './CallEndedModal';
 import { Transcript } from './Transcript';
 import { Controls } from './Controls';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
@@ -16,9 +17,7 @@ interface InterviewRoomProps {
 
 export function InterviewRoom({ role }: InterviewRoomProps) {
   const router = useRouter();
-  const [isMuted, setIsMuted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const hasStartedRef = useRef(false);
 
   const {
     phase,
@@ -28,6 +27,7 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
     isSpeaking,
     isThinking,
     error,
+    result,
     startInterviewSession,
     submitResponse,
     startListening,
@@ -35,21 +35,13 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
     endInterviewSession,
   } = useInterview();
 
-  // Start interview on mount (only once)
-  useEffect(() => {
-    if (!hasStartedRef.current) {
-      hasStartedRef.current = true;
-      startInterviewSession(role);
-    }
-  }, [role, startInterviewSession]);
+  useEffect(() => { void startInterviewSession(role); }, [role, startInterviewSession]);
 
-  // Timer
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeElapsed((prev) => prev + 1);
-    }, 1000);
+    if (phase !== 'active') return;
+    const interval = setInterval(() => setTimeElapsed(previous => previous + 1), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [phase]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -60,16 +52,17 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
 
   const handleEndInterview = async () => {
     await endInterviewSession();
-    router.push('/results');
   };
 
-  if (phase === 'ended') {
-    router.push('/results');
-    return null;
-  }
-
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col overflow-hidden">
+    <>
+    {(phase === 'ending' || phase === 'ended') && <CallEndedModal
+      result={result} isGenerating={isThinking} error={phase === 'ending' ? error : null}
+      onRetry={() => { void endInterviewSession(); }}
+      onViewResults={() => router.push('/results')}
+      onPracticeAgain={() => { sessionStorage.removeItem('interviewResult'); router.push('/'); }}
+    />}
+    <div inert={phase === 'ending' || phase === 'ended'} className="h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col overflow-y-auto lg:overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 shrink-0">
         <button
@@ -89,7 +82,7 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
       {/* Instruction banner */}
       <div className="bg-blue-500/20 border-b border-blue-500/30 px-6 py-2 text-center shrink-0">
         <p className="text-sm text-blue-300">
-          <strong>Tip:</strong> Just speak naturally. After you pause for 3 seconds, your response will be sent automatically.
+          {phase === 'waiting' ? 'Take a breath. Alex will begin after a 3-second pause.' : <><strong>Tip:</strong> Speak naturally. After 3 seconds of silence, your answer is sent automatically. You can also use Send answer.</>}
         </p>
       </div>
 
@@ -101,23 +94,24 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
       )}
 
       {/* Main content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 flex-col lg:flex-row lg:min-h-0">
         {/* Video section */}
         <div className="flex-1 p-4 flex flex-col min-h-0">
-          <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+          <div className="min-h-60 grid grid-cols-2 gap-4 lg:flex-1 lg:min-h-0">
             {/* AI Interviewer */}
             <div className="relative">
               <AIAvatar isSpeaking={isSpeaking} isThinking={isThinking} />
             </div>
             {/* User */}
             <div className="relative">
-              <UserVideo isMuted={isMuted} onToggleMute={() => setIsMuted(!isMuted)} />
+              {phase !== 'ending' && phase !== 'ended' && <UserVideo isMuted={!isListening} />}
             </div>
           </div>
 
           {/* Controls */}
           <div className="mt-4 shrink-0">
             <Controls
+              isReady={phase === 'active'}
               isListening={isListening}
               isThinking={isThinking}
               isSpeaking={isSpeaking}
@@ -131,10 +125,11 @@ export function InterviewRoom({ role }: InterviewRoomProps) {
         </div>
 
         {/* Transcript sidebar */}
-        <div className="w-80 p-4 border-l border-slate-700 shrink-0">
+        <div className="h-80 w-full p-4 border-t lg:border-t-0 lg:border-l border-slate-700 shrink-0 lg:h-auto lg:w-80">
           <Transcript messages={messages} currentTranscript={currentTranscript} />
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -34,8 +34,18 @@ Before choosing a role, select Google Gemini or an OpenAI-compatible provider an
 
 Requests use Gemini's `generateContent` API or the OpenAI-compatible `/chat/completions` API. Custom endpoints must allow browser requests through CORS. Keys remain only in tab memory, clear on refresh, and are sent directly to the chosen provider with interview text. You can change providers or clear the key from role selection. No shared application API key or `NEXT_PUBLIC_OPENROUTER_API_KEY` is required.
 
-Provider adapter tests (Node.js 24):
+Interview flow and provider tests (Node.js 24):
 
 ```bash
-node --test tests/providers.test.mjs
+npm test
 ```
+
+## Interview flow and agent prompt
+
+Gemini defaults to `gemini-3.1-flash-lite`; the model ID remains editable. Free-tier eligibility depends on the provider and the user's account.
+
+After a role is selected, there is a cancelable three-second preparation pause before the opening speech. Alex introduces the selected role and asks for an introduction. The browser then listens, sending the answer after three seconds without a transcript update; **Send answer** supports manual submission and retry. Interim speech updates reset the timer. If automatic speech cannot play, the page displays the question and asks the user to start speaking manually.
+
+**End interview** sends the conversation, including any unsent final answer, for evaluation. The call-ended modal stops camera, microphone, and speech, then displays feedback from the selected provider. Only valid feedback is displayed; provider or parsing failures leave a Retry feedback action in the modal. If no answers were recorded, no scores are generated. Feedback stays in the tab session until **Practice again**, allowing a results-page refresh.
+
+The full prompt is in `src/lib/interviewPrompts.ts`, in `getSystemPrompt`. It defines Alex as a warm, conversational interviewer, includes the selected role's title, level, department, description, and skills, asks one question at a time, and follows introductions, background, 4–6 role questions, behavioral questions, candidate questions, and wrap-up. Spoken replies use 3–4 sentences without markdown. Only an explicit final evaluation request produces JSON: a practice recommendation (`hire`, `no-hire`, or `maybe`), reasoning, five scores from 1 to 10, strengths, improvements, and a 1–10 star rating with feedback for every candidate answer. Feedback must be based on actual answers, with insufficient evidence explained.
